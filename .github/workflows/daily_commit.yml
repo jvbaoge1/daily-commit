@@ -17,13 +17,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Random delay (0~6 小时)
+      - name: Decide whether to wait
         run: |
-          RANDOM_HOUR=$(( RANDOM % 6 ))
-          RANDOM_MIN=$(( RANDOM % 60 ))
-          TOTAL_SEC=$(( RANDOM_HOUR*3600 + RANDOM_MIN*60 ))
-          echo "⏳ 等待 $RANDOM_HOUR 小时 $RANDOM_MIN 分钟后提交..."
-          sleep $TOTAL_SEC
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "手动触发 → 跳过等待，立即提交 🚀"
+          else
+            RANDOM_HOUR=$(( RANDOM % 6 ))
+            RANDOM_MIN=$(( RANDOM % 60 ))
+            TOTAL_SEC=$(( RANDOM_HOUR*3600 + RANDOM_MIN*60 ))
+            echo "⏳ 定时触发 → 等待 $RANDOM_HOUR 小时 $RANDOM_MIN 分钟后提交"
+            sleep $TOTAL_SEC
+          fi
 
       - name: Generate pseudo code & update README
         run: |
@@ -59,5 +63,6 @@ jobs:
       - name: Commit & Push changes
         run: |
           git add README.md
-          git commit -m "chore: daily update $(date '+%Y-%m-%d %H:%M:%S')" || echo "⚠️ No changes to commit"
-          git push
+          git commit -m "chore: daily update $(date '+%Y-%m-%d %H:%M:%S')" || echo "⚠️ Nothing to commit"
+          git pull --rebase origin main || true
+          git push origin main || echo "⚠️ Push failed"
