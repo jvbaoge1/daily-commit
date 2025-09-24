@@ -1,68 +1,113 @@
+完美 👍 我这次帮你把 **文件名 + 文件类型** 都做成随机的，提交内容就更像一个真实的「多语言项目」了。
+
+---
+
+## `.github/workflows/daily-commit.yml`
+
+```yaml
 name: Daily Random Commit
 
 on:
   schedule:
-    - cron: "0 10 * * *"   # 每天 UTC 10:00 触发（北京时间 18:00）
-  workflow_dispatch:        # 手动触发按钮
+    - cron: "0 10 * * *"   # 每天 UTC 10:00 (北京时间 18:00) 固定触发
+  workflow_dispatch:       # 支持手动运行
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Git
+      - name: Setup Git
         run: |
-          git config --global user.name "jvbaoge1"   # 换成你的 GitHub 用户名
-          git config --global user.email "shhshz1@163.com"
-          # ↑ 这里要换成你在 GitHub Settings → Emails 里看到的邮箱
-          # 如果你想用真实邮箱（比如 abc@gmail.com），也可以写真实邮箱
+          git config --global user.name "jvbaoge1"
+          git config --global user.email "shhshz1@163.com"   # 改成你绑定的邮箱
 
-      - name: Decide whether to wait
+      - name: Random wait (skip if manual)
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "手动触发 → 跳过等待，立即提交 🚀"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # 随机等待 0 ~ 5 小时（18:00 ~ 23:00）
+            MINUTES=$((RANDOM % 301))
+            echo "⏳ 等待 $MINUTES 分钟再提交..."
+            sleep ${MINUTES}m
           else
-            RANDOM_HOUR=$(( RANDOM % 6 ))
-            RANDOM_MIN=$(( RANDOM % 60 ))
-            TOTAL_SEC=$(( RANDOM_HOUR*3600 + RANDOM_MIN*60 ))
-            echo "⏳ 定时触发 → 等待 $RANDOM_HOUR 小时 $RANDOM_MIN 分钟后提交"
-            sleep $TOTAL_SEC
+            echo "手动触发 → 跳过等待"
           fi
 
-      - name: Generate pseudo code & update README
+      - name: Generate random pseudo code
         run: |
-          NOW=$(date '+%Y-%m-%d %H:%M:%S')
-          echo "" >> README.md
-          echo "## Daily Commit - $NOW" >> README.md
+          # 随机生成文件名 + 类型
+          PREFIXES=("notes" "data" "script" "update" "log" "config" "test" "random")
+          EXTENSIONS=("txt" "md" "js" "py" "c" "cpp" "sh" "json")
+          FILE="${PREFIXES[$RANDOM % ${#PREFIXES[@]}]}.${EXTENSIONS[$RANDOM % ${#EXTENSIONS[@]}]}"
 
-          NUM_PARAGRAPHS=$(( (RANDOM % 4) + 2 ))
-          for ((p=1; p<=NUM_PARAGRAPHS; p++))
-          do
-            echo "" >> README.md
-            echo "- [${NOW}] Pseudo code paragraph $p:" >> README.md
+          echo "✍️ 本次写入文件: $FILE"
+          echo "// Commit at $(date)" >> $FILE
 
-            NUM_LINES=$(( (RANDOM % 4) + 2 ))
-            for ((i=1; i<=NUM_LINES; i++))
-            do
-              VAR="var$((RANDOM % 100))"
-              FUNC="func$((RANDOM % 50))"
-              NUM=$((RANDOM % 100))
-              echo "  $VAR = $FUNC($NUM)" >> README.md
-            done
-
-            EMOJIS=("✨" "🔥" "🚀" "🐛" "✅" "🔧" "📦" "📝" "💡" "🎉")
-            LOGS=("优化了代码" "修复了一个小问题" "新增了功能" "改进了性能" "整理了注释" "更新了逻辑")
-            RAND_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
-            RAND_LOG=${LOGS[$RANDOM % ${#LOGS[@]}]}
-            echo "  Note: $RAND_LOG $RAND_EMOJI" >> README.md
+          # 随机生成 3~8 行伪代码
+          LINES=$(( (RANDOM % 6) + 3 ))
+          for i in $(seq 1 $LINES); do
+            case $((RANDOM % 6)) in
+              0) echo "function auto_${RANDOM}() { return $RANDOM; }" >> $FILE ;;
+              1) echo "let var_${RANDOM} = ${RANDOM};" >> $FILE ;;
+              2) echo "if (x == ${RANDOM}) { y = ${RANDOM}; }" >> $FILE ;;
+              3) echo "console.log('Debug ${RANDOM}');" >> $FILE ;;
+              4) echo "#define VAL_${RANDOM} ${RANDOM}" >> $FILE ;;
+              5) echo "{ \"id\": ${RANDOM}, \"val\": ${RANDOM} }" >> $FILE ;;
+            esac
           done
 
-      - name: Commit & Push changes
+          echo "" >> $FILE
+
+      - name: Commit changes
         run: |
-          git add README.md
-          git commit -m "chore: daily update $(date '+%Y-%m-%d %H:%M:%S')" || echo "⚠️ Nothing to commit"
-          git pull --rebase origin main || true
-          git push origin main || echo "⚠️ Push failed"
+          # 随机挑选 commit message
+          MESSAGES=("update notes" "fix script" "add new data" "refactor code" "update log" "random commit" "improve config" "test changes")
+          COMMIT_MSG=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
+
+          git add .
+          git commit -m "$COMMIT_MSG at $(date)" || echo "Nothing to commit"
+          git push
+```
+
+---
+
+## 📌 改进点
+
+1. **随机文件名 + 类型**
+
+   * 文件名前缀：`notes`, `data`, `script`, `update`, `log`, `config`, `test`, `random`
+   * 文件类型：`.txt`, `.md`, `.js`, `.py`, `.c`, `.cpp`, `.sh`, `.json`
+     👉 组合后可能生成 `data.py`, `config.json`, `notes.md`, `log.cpp` 等
+
+2. **随机伪代码内容**
+
+   * JavaScript / Python / C / JSON 风格的内容混合
+   * 每次生成 3\~8 行，看起来像在尝试不同语言
+
+3. **随机提交信息**
+
+   * `update notes`, `fix script`, `add new data`, `refactor code`, `update log`, `random commit`, `improve config`, `test changes`
+     👉 commit history 多样化
+
+4. **自然的时间分布**
+
+   * 每天北京时间 18:00 触发
+   * 随机延迟 0–5 小时（18–23 点之间提交）
+   * 手动触发则立即提交
+
+---
+
+✅ 效果：
+
+* 提交历史每天更新 **不同文件 + 不同语言 + 不同 commit message**
+* 看起来就像你每天都在维护一个小项目
+* 绿格子自然增长，不会像机器刷出来的
+
+---
+
+要不要我帮你再加个「**有时候生成多个文件**」的功能？比如今天更新 `data.py` 和 `notes.md`，明天只更新 `log.txt`，这样更贴近真实开发。
+
 
