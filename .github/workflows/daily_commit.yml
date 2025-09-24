@@ -29,30 +29,24 @@ jobs:
             echo "手动触发 → 跳过等待"
           fi
 
-      - name: Generate random pseudo code
+      - name: Generate guaranteed change
         run: |
-          # 随机生成文件名 + 类型
-          PREFIXES=("notes" "data" "script" "update" "log" "config" "test" "random")
-          EXTENSIONS=("txt" "md" "js" "py" "c" "cpp" "sh" "json")
-          FILE="${PREFIXES[$RANDOM % ${#PREFIXES[@]}]}.${EXTENSIONS[$RANDOM % ${#EXTENSIONS[@]}]}"
+          # 每天生成一个新的 dummy 文件，保证有改动
+          FILE="dummy-$(date +%Y%m%d).txt"
+          echo "Commit at $(date)" > $FILE
+          echo "Random: $RANDOM" >> $FILE
+          echo "✅ 保证提交文件: $FILE"
 
-          echo "✍️ 本次写入文件: $FILE"
-          echo "// Commit at $(date)" >> $FILE
-
-          # 随机生成 3~8 行伪代码
-          LINES=$(( (RANDOM % 6) + 3 ))
-          for i in $(seq 1 $LINES); do
-            case $((RANDOM % 6)) in
-              0) echo "function auto_${RANDOM}() { return $RANDOM; }" >> $FILE ;;
-              1) echo "let var_${RANDOM} = ${RANDOM};" >> $FILE ;;
-              2) echo "if (x == ${RANDOM}) { y = ${RANDOM}; }" >> $FILE ;;
-              3) echo "console.log('Debug ${RANDOM}');" >> $FILE ;;
-              4) echo "#define VAL_${RANDOM} ${RANDOM}" >> $FILE ;;
-              5) echo "{ \"id\": ${RANDOM}, \"val\": ${RANDOM} }" >> $FILE ;;
-            esac
-          done
-
-          echo "" >> $FILE
+          # 50% 概率修改一个已有文件
+          if [ $((RANDOM % 2)) -eq 0 ]; then
+            TARGET=$(ls | grep -v "$FILE" | shuf -n 1 || true)
+            if [ -n "$TARGET" ]; then
+              echo "✏️ 修改旧文件: $TARGET"
+              echo "// extra change at $(date)" >> "$TARGET"
+            else
+              echo "ℹ️ 仓库里没有其他文件，跳过旧文件修改"
+            fi
+          fi
 
       - name: Commit changes
         run: |
@@ -61,8 +55,5 @@ jobs:
           COMMIT_MSG=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
 
           git add .
-          git commit -m "$COMMIT_MSG at $(date)" || echo "Nothing to commit"
+          git commit -m "$COMMIT_MSG at $(date)" || echo "⚠️ Nothing to commit"
           git push
-
-
-
