@@ -14,8 +14,10 @@ jobs:
 
       - name: Set up Git
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "jvbaoge1"   # 换成你的 GitHub 用户名
+          git config --global user.email "shhshz1@163.com"
+          # ↑ 这里要换成你在 GitHub Settings → Emails 里看到的邮箱
+          # 如果你想用真实邮箱（比如 abc@gmail.com），也可以写真实邮箱
 
       - name: Decide whether to wait
         run: |
@@ -35,14 +37,12 @@ jobs:
           echo "" >> README.md
           echo "## Daily Commit - $NOW" >> README.md
 
-          # 随机生成 2~5 段伪代码
           NUM_PARAGRAPHS=$(( (RANDOM % 4) + 2 ))
           for ((p=1; p<=NUM_PARAGRAPHS; p++))
           do
             echo "" >> README.md
             echo "- [${NOW}] Pseudo code paragraph $p:" >> README.md
 
-            # 每段 2~5 行伪代码
             NUM_LINES=$(( (RANDOM % 4) + 2 ))
             for ((i=1; i<=NUM_LINES; i++))
             do
@@ -52,7 +52,6 @@ jobs:
               echo "  $VAR = $FUNC($NUM)" >> README.md
             done
 
-            # 随机日志 + emoji
             EMOJIS=("✨" "🔥" "🚀" "🐛" "✅" "🔧" "📦" "📝" "💡" "🎉")
             LOGS=("优化了代码" "修复了一个小问题" "新增了功能" "改进了性能" "整理了注释" "更新了逻辑")
             RAND_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
@@ -66,3 +65,4 @@ jobs:
           git commit -m "chore: daily update $(date '+%Y-%m-%d %H:%M:%S')" || echo "⚠️ Nothing to commit"
           git pull --rebase origin main || true
           git push origin main || echo "⚠️ Push failed"
+
