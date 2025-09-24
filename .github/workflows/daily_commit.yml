@@ -2,8 +2,8 @@ name: Daily Random Commit
 
 on:
   schedule:
-    - cron: "0 10 * * *"   # 每天 UTC 10:00 (北京时间 18:00) 固定触发
-  workflow_dispatch:       # 支持手动运行
+    - cron: "0 10 * * *"   # 每天 UTC 10:00 (北京时间 18:00) 触发
+  workflow_dispatch:       # 手动运行
 
 jobs:
   build:
@@ -12,18 +12,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true   # ✅ 确保可以 push
+          fetch-depth: 0              # ✅ 保留完整提交历史，避免冲突
 
       - name: Setup Git
         run: |
           git config --global user.name "jvbaoge1"
-          git config --global user.email "shhshz1@163.com "   # 改成你绑定的邮箱
+          git config --global user.email "shhshz1@163.com "
 
       - name: Random wait (skip if manual)
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            # 随机等待 0 ~ 5 小时（18:00 ~ 23:00）
-            MINUTES=$((RANDOM % 301))
-            echo "⏳ 等待 $MINUTES 分钟再提交..."
+            MINUTES=$((RANDOM % 301))   # 随机 0~300 分钟
+            echo "⏳ 等待 $MINUTES 分钟..."
             sleep ${MINUTES}m
           else
             echo "手动触发 → 跳过等待"
@@ -31,29 +33,27 @@ jobs:
 
       - name: Generate guaranteed change
         run: |
-          # 每天生成一个新的 dummy 文件，保证有改动
-          FILE="dummy-$(date +%Y%m%d).txt"
+          mkdir -p changes
+          FILE="changes/dummy-$(date +%Y%m%d-%H%M%S).txt"
           echo "Commit at $(date)" > $FILE
           echo "Random: $RANDOM" >> $FILE
-          echo "✅ 保证提交文件: $FILE"
+          echo "✅ 已生成文件: $FILE"
 
-          # 50% 概率修改一个已有文件
+          # 50% 概率修改已有文件
           if [ $((RANDOM % 2)) -eq 0 ]; then
-            TARGET=$(ls | grep -v "$FILE" | shuf -n 1 || true)
+            TARGET=$(find . -type f ! -path "./.git/*" ! -name "$FILE" | shuf -n 1 || true)
             if [ -n "$TARGET" ]; then
               echo "✏️ 修改旧文件: $TARGET"
               echo "// extra change at $(date)" >> "$TARGET"
-            else
-              echo "ℹ️ 仓库里没有其他文件，跳过旧文件修改"
             fi
           fi
 
       - name: Commit changes
         run: |
-          # 随机挑选 commit message
           MESSAGES=("update notes" "fix script" "add new data" "refactor code" "update log" "random commit" "improve config" "test changes")
           COMMIT_MSG=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
 
-          git add .
+          git add -A
           git commit -m "$COMMIT_MSG at $(date)" || echo "⚠️ Nothing to commit"
-          git push
+          git push origin HEAD:main   # ✅ 确保推送到 main 分支
+
