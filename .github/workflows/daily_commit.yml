@@ -1,9 +1,12 @@
-name: Daily Random Commit (Debug)
+name: Daily Random Commit
 
 on:
   schedule:
     - cron: "0 2 * * *"   # 每天 UTC 02:00 (北京时间 10:00) 触发
   workflow_dispatch:       # 手动运行
+
+permissions:
+  contents: write   # ✅ 确保有写入代码权限（不用 workflows）
 
 jobs:
   build:
@@ -18,10 +21,8 @@ jobs:
 
       - name: Setup Git
         run: |
-          echo "🔧 配置 Git 用户信息..."
           git config --global user.name "jvbaoge1"
           git config --global user.email "shhshz1@163.com"
-          git config --list
 
       - name: Random wait (skip if manual)
         run: |
@@ -41,9 +42,12 @@ jobs:
           echo "Random: $RANDOM" >> $FILE
           echo "✅ 已生成文件: $FILE"
 
-          # 50% 概率修改已有文件
+          # 50% 概率修改已有文件，但跳过 .git 和 .github/workflows
           if [ $((RANDOM % 2)) -eq 0 ]; then
-            TARGET=$(find . -type f ! -path "./.git/*" ! -name "$FILE" | shuf -n 1 || true)
+            TARGET=$(find . -type f \
+              ! -path "./.git/*" \
+              ! -path "./.github/workflows/*" \
+              ! -name "$FILE" | shuf -n 1 || true)
             if [ -n "$TARGET" ]; then
               echo "✏️ 修改旧文件: $TARGET"
               echo "// extra change at $(date)" >> "$TARGET"
@@ -52,18 +56,17 @@ jobs:
 
       - name: Commit and Push changes
         run: |
-          set -x   # 👀 开启调试模式，所有命令都会打印
+          set -x
           MESSAGES=("update notes" "fix script" "add new data" "refactor code" "update log" "random commit" "improve config" "test changes")
           COMMIT_MSG=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
 
           git add -A
           git status
 
-          # 提交
           git commit -m "$COMMIT_MSG at $(date)" || echo "⚠️ Nothing to commit"
-
-          # 避免落后远程导致 push 失败
           git pull --rebase origin HEAD || true
+          git push origin HEAD --verbose
+
 
           # 推送并显示详细信息
           git push origin HEAD --verbose
