@@ -1,9 +1,9 @@
-name: Daily Random Commit
+name: Daily Random Commit (Debug)
 
 on:
   schedule:
     - cron: "0 2 * * *"   # 每天 UTC 02:00 (北京时间 10:00) 触发
-  workflow_dispatch:       # 支持手动运行
+  workflow_dispatch:       # 手动运行
 
 jobs:
   build:
@@ -13,19 +13,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true   # ✅ 确保可以 push
-          fetch-depth: 0              # ✅ 完整历史，避免冲突
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Setup Git
         run: |
+          echo "🔧 配置 Git 用户信息..."
           git config --global user.name "jvbaoge1"
           git config --global user.email "shhshz1@163.com"
+          git config --list
 
       - name: Random wait (skip if manual)
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            MINUTES=$((RANDOM % 720))   # 随机等待 0~719 分钟 (0~12 小时)
-            echo "⏳ 等待 $MINUTES 分钟..."
+            MINUTES=$((RANDOM % 720))   # 0~719 分钟 (0~12 小时)
+            echo "⏳ 随机等待 $MINUTES 分钟..."
             sleep ${MINUTES}m
           else
             echo "手动触发 → 跳过等待"
@@ -50,10 +52,18 @@ jobs:
 
       - name: Commit and Push changes
         run: |
+          set -x   # 👀 开启调试模式，所有命令都会打印
           MESSAGES=("update notes" "fix script" "add new data" "refactor code" "update log" "random commit" "improve config" "test changes")
           COMMIT_MSG=${MESSAGES[$RANDOM % ${#MESSAGES[@]}]}
 
           git add -A
-          git status  # 👀 调试用
+          git status
+
+          # 提交
           git commit -m "$COMMIT_MSG at $(date)" || echo "⚠️ Nothing to commit"
-          git push origin HEAD   # ✅ 推送到当前分支
+
+          # 避免落后远程导致 push 失败
+          git pull --rebase origin HEAD || true
+
+          # 推送并显示详细信息
+          git push origin HEAD --verbose
