@@ -27,7 +27,7 @@ jobs:
       - name: Random wait (skip if manual)
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            MINUTES=$((RANDOM % 720))   # 0~719 分钟 (0~12 小时)
+            MINUTES=$((RANDOM % 180))   # 0~179分钟 (0~12 小时)
             echo "⏳ 随机等待 $MINUTES 分钟..."
             sleep ${MINUTES}m
           else
